@@ -1,0 +1,21 @@
+{
+  "name": "migratetobullmq",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "scheduler": "node scheduler.js",
+    "worker": "node worker.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "bullmq": "^6.3.11",
+    "dotenv": "^18.0.5",
+    "ioredis": "^6.0.0"
+  }
+}
