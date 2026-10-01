@@ -87,8 +87,10 @@ MIgratetoBullMq/
 ├── assets/
 │   ├── architecture-diagram.png    # System visual architecture
 │   └── workflow-diagram.png        # Sequence workflow visual diagram
-├── .env                            # Environment variables (PORT, NUM_WORKERS, REDIS)
-├── server.js                       # All-in-one runner: runs scheduler & spawns worker pool
+├── .env                            # Environment variables (PORT, NUM_WORKERS, REDIS, AUTH)
+├── server.js                       # All-in-one runner: runs scheduler, workers & Bull Board
+├── bull-board.js                   # Bull Board UI setup for queue monitoring
+├── auth.js                         # Basic authentication middleware for Bull Board
 ├── redis.js                        # Centralized Redis connection configuration
 ├── queue.js                        # BullMQ Queue instance ('cron-jobs')
 ├── jobs.js                         # Job names, cron patterns, and task execution logic
@@ -103,22 +105,31 @@ MIgratetoBullMq/
 ## 🧩 File Explanations
 
 ### 1. `.env` — Environment Configuration
-Defines server port, instance ID, Redis connection, and number of workers to spawn inside the process:
+Defines server port, instance ID, Redis connection, worker count, and Bull Board credentials:
 ```env
 PORT=3000
 INSTANCE_ID=server-1
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 NUM_WORKERS=2
+
+# Bull Board Credentials
+BULL_BOARD_USERNAME=admin
+BULL_BOARD_PASSWORD=kaustav
 ```
 
-### 2. `server.js` — All-in-One Server Runner
+### 2. `bull-board.js` & `auth.js` — Web Dashboard & Security
+- **`bull-board.js`**: Integrates `@bull-board/express` and `@bull-board/api` to provide an interactive web dashboard for monitoring queues, active/completed/failed jobs, and repeatable schedules.
+- **`auth.js`**: HTTP Basic Authentication middleware enforcing authentication before granting access to `/admin/queues`.
+
+### 3. `server.js` — All-in-One Server Runner
 Combines the entire system into a single cohesive process:
 1. Loads `.env` configuration.
 2. Synchronizes repeatable jobs using `scheduleJobs()` (creates new ones or skips existing ones).
 3. Spawns `NUM_WORKERS` workers (e.g., `server-1-w1`, `server-1-w2`) running concurrently.
-4. Starts an HTTP health-check server (`http://localhost:3000`).
-5. Handles graceful shutdown (`SIGINT`/`SIGTERM`) cleanly terminating all workers and queue connections.
+4. Mounts the **Bull Board UI** at `http://localhost:3000/admin/queues`.
+5. Starts an HTTP health-check server (`http://localhost:3000`).
+6. Handles graceful shutdown (`SIGINT`/`SIGTERM`) cleanly terminating all workers and queue connections.
 
 ### 3. `redis.js` — Connection Configuration
 Configures connection parameters for Redis. Uses `maxRetriesPerRequest: null` as required by BullMQ to allow blocking commands (`BRPOPLPUSH`) without request timeout errors.

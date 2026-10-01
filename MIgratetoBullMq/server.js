@@ -1,10 +1,11 @@
 import "dotenv/config";
-import http from "http";
+import express from "express";
 import { Worker } from "bullmq";
 import { QUEUE_NAME, cronQueue } from "./queue.js";
 import { connectionOptions } from "./redis.js";
 import { scheduleJobs } from "./scheduler.js";
 import { executeJob } from "./jobs.js";
+import { setupBullBoard } from "./bull-board.js";
 
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const INSTANCE_ID = process.env.INSTANCE_ID || "server-1";
@@ -63,25 +64,30 @@ for (let i = 1; i <= NUM_WORKERS; i++) {
 }
 
 /**
- * 3. HTTP Health-check & Status Server
+ * 3. Express App & Bull Board Integration
  */
-const server = http.createServer((req, res) => {
-  res.writeHead(200, { "Content-Type": "application/json" });
-  res.end(
-    JSON.stringify({
-      status: "running",
-      instanceId: INSTANCE_ID,
-      port: PORT,
-      pid: process.pid,
-      activeWorkers: workers.length,
-      workerIds: workers.map((w) => w.id),
-      timestamp: new Date().toISOString(),
-    })
-  );
+const app = express();
+
+// Mount Bull Board UI at /admin/queues (protected by Basic Auth)
+setupBullBoard(app);
+
+// Status / Health check endpoint
+app.get("/", (req, res) => {
+  res.json({
+    status: "running",
+    instanceId: INSTANCE_ID,
+    port: PORT,
+    pid: process.pid,
+    activeWorkers: workers.length,
+    workerIds: workers.map((w) => w.id),
+    bullBoardUrl: `http://localhost:${PORT}/admin/queues`,
+    timestamp: new Date().toISOString(),
+  });
 });
 
-server.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`[${INSTANCE_ID}] HTTP Server listening on http://localhost:${PORT}`);
+  console.log(`[${INSTANCE_ID}] 📊 Bull Board Dashboard: http://localhost:${PORT}/admin/queues`);
   console.log("====================================");
 });
 
